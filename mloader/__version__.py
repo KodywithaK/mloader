@@ -8,6 +8,6 @@
 
 __title__ = "mloader"
 __description__ = "Command-line tool to download manga from mangaplus"
-__url__ = "https://github.com/hurlenko/mloader"
-__version__ = "1.1.10"
+__url__ = "https://github.com/KodywithaK/mloader"
+__version__ = "2025.10.22"
 __license__ = "GPLv3"

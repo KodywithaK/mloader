@@ -24,9 +24,9 @@ MangaList = Dict[int, Set[int]]  # Title ID: Set[Chapter ID]
 
 AUTH_PARAMS = {
     # see https://github.com/hurlenko/mloader/issues/36#issuecomment-2463070927
-    "app_ver": "222",
     "os": "android",
     "os_ver": "36",
+    "app_ver": "223",
     "secret": "UPDATE_ME",
 }
 

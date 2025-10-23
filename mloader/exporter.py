@@ -9,7 +9,11 @@ import io
 
 from mloader.constants import Language
 from mloader.response_pb2 import Title, Chapter
-from mloader.utils import escape_path, is_oneshot, chapter_name_to_int
+from mloader.utils import (
+    escape_path,
+    is_oneshot,
+    chapter_name_to_int
+)
 from mloader.__version__ import __title__, __version__
 
 
@@ -23,9 +27,11 @@ class ExporterBase(metaclass=ABCMeta):
         chapter: Chapter,
         next_chapter: Optional[Chapter] = None,
         add_chapter_title: bool = False,
+        add_chapter_subdir: bool = False,
     ):
         self.destination = destination
         self.add_chapter_title = add_chapter_title
+        self.add_chapter_subdir = add_chapter_subdir
         self.title_name = escape_path(title.name).title()
         self.is_oneshot = is_oneshot(chapter.name, chapter.sub_title)
         self.is_extra = self._is_extra(chapter.name)
@@ -125,8 +131,11 @@ class RawExporter(ExporterBase):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.path = Path(self.destination, self.title_name, self.chapter_name)
+        self.path = Path(self.destination, self.title_name)
         self.path.mkdir(parents=True, exist_ok=True)
+        if self.add_chapter_subdir:
+            self.path = self.path.joinpath(self.chapter_name)
+            self.path.mkdir(parents=True, exist_ok=True)
 
     def add_image(self, image_data: bytes, index: Union[int, range]):
         filename = Path(self.format_page_name(index))
