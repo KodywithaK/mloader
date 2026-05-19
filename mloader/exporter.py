@@ -67,7 +67,7 @@ class ExporterBase(metaclass=ABCMeta):
     ) -> str:
         # https://github.com/Daiz/manga-naming-scheme
         components = [title_name]
-        if Language(language) != Language.eng:
+        if Language(language) != Language.lat:
             components.append(f"[{Language(language).name}]")
         components.append("-")
         suffix = ""
@@ -123,7 +123,7 @@ class RawExporter(ExporterBase):
         self.path = Path(self.destination, self.title_name)
         self.path.mkdir(parents=True, exist_ok=True)
         if self.add_chapter_subdir:
-            self.path = self.path.joinpath(self.chapter_name)
+            self.path = self.path.joinpath(self.chapter_name, "RAW")
             self.path.mkdir(parents=True, exist_ok=True)
 
     def add_image(self, image_data: bytes, index: Union[int, range]):

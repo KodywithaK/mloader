@@ -4,8 +4,9 @@ from enum import Enum
 class Language(Enum):
     eng = 0
     spa = 1
-    fre = 2
+    fra = 2
     ind = 3
+    lat = -1
     por = 4
     rus = 5
     tha = 6
