@@ -22,9 +22,6 @@ def _format_language_tag(language: int) -> str:
     except ValueError:
         return f" [LANG-{language}]"
 
-    if parsed_language == Language.ENGLISH:
-        return ""
-
     return f" [{parsed_language.name}]"
 
 

@@ -37,7 +37,7 @@ class RawExporter(ExporterBase):
         self.path.mkdir(parents=True, exist_ok=True)
 
         if self.add_chapter_subdir:
-            self.path = self.path.joinpath(self.chapter_name)
+            self.path = self.path.joinpath(self.chapter_name, "RAW")
             self.path.mkdir(parents=True, exist_ok=True)
 
     def add_image(self, image_data: bytes, index: PageIndex) -> None:

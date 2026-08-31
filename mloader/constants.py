@@ -6,15 +6,16 @@ from enum import Enum
 class Language(Enum):
     """Represent supported manga languages."""
 
-    ENGLISH = 0
-    SPANISH = 1
-    FRENCH = 2
-    INDONESIAN = 3
-    PORTUGUESE = 4
-    RUSSIAN = 5
-    THAI = 6
-    GERMAN = 7
-    VIETNAMESE = 9
+    DUMMY = -1
+    ENG = 0 # ENGLISH
+    SPA = 1 # SPANISH
+    FRA = 2 # FRENCH
+    IND = 3 # INDONESIAN
+    POR = 4 # PORTUGUESE
+    RUS = 5 # RUSSIAN
+    THA = 6 # THAI
+    DEU = 7 # GERMAN
+    VIE = 9 # VIETNAMESE
 
 
 class ChapterType(Enum):

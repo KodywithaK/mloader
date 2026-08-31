@@ -109,7 +109,7 @@ class ExporterBase(metaclass=ABCMeta):
         """Return the chapter language as an ISO 639-1 code."""
         return _iso_language_code(self.language)
 
-    def format_page_name(self, page: PageIndex, ext: str = ".jpg") -> str:
+    def format_page_name(self, page: PageIndex, ext: str = ".webp") -> str:
         """Return the canonical page filename for ``page``."""
         if isinstance(page, range):
             page_str = f"p{page.start:0>3}-{page.stop:0>3}"

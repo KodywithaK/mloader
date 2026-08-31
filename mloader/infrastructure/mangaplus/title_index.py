@@ -25,7 +25,7 @@ DEFAULT_TITLE_INDEX_ENDPOINT = settings.DEFAULT_TITLE_INDEX_ENDPOINT
 LANGUAGE_FILTER_CODES: dict[str, set[int]] = {
     language.name.lower(): {language.value} for language in Language
 }
-LANGUAGE_FILTER_CODES["vietnamese"].add(8)
+LANGUAGE_FILTER_CODES["vie"].add(8)
 LANGUAGE_FILTER_CHOICES = tuple(LANGUAGE_FILTER_CODES)
 API_RETRY_STATUS_CODES: set[int] = set(settings.RETRY_STATUS_CODES)
 API_MAX_ATTEMPTS = settings.TITLE_INDEX_MAX_ATTEMPTS
