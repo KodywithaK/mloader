@@ -18,18 +18,19 @@ def _is_extra(chapter_name: str) -> bool:
 
 
 def _iso_language_code(language: int) -> str:
-    """Convert internal language codes to ISO 639-1 values."""
+    """Convert internal language codes to ISO 639-3 values."""
     language_map: dict[int, str] = {
-        Language.ENGLISH.value: "en",
-        Language.SPANISH.value: "es",
-        Language.FRENCH.value: "fr",
-        Language.INDONESIAN.value: "id",
-        Language.PORTUGUESE.value: "pt",
-        Language.RUSSIAN.value: "ru",
-        Language.THAI.value: "th",
-        Language.GERMAN.value: "de",
-        Language.VIETNAMESE.value: "vi",
-        8: "vi",  # Legacy Vietnamese code observed in historical payloads.
+        Language.DUMMY.value: "DUMMY",
+        Language.ENGLISH.value: "eng",
+        Language.SPANISH.value: "spa",
+        Language.FRENCH.value: "fra",
+        Language.INDONESIAN.value: "ind",
+        Language.PORTUGUESE.value: "por",
+        Language.RUSSIAN.value: "rus",
+        Language.THAI.value: "tha",
+        Language.GERMAN.value: "deu",
+        Language.VIETNAMESE.value: "vie",
+        8: "vie",  # Legacy Vietnamese code observed in historical payloads.
     }
     return language_map.get(language, "en")
 
