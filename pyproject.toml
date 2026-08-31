@@ -1,0 +1,90 @@
+[build-system]
+requires = ["hatchling>=1.27.0"]
+build-backend = "hatchling.build"
+
+[project]
+name = "mloader-ng"
+version = "2.1.2"
+description = "Command-line tool to download manga from mangaplus"
+readme = "README.md"
+requires-python = ">=3.14"
+license = { text = "GPL-3.0-or-later" }
+authors = [
+    { name = "l0westbob" },
+    { name = "Hurlenko" },
+]
+dependencies = [
+    "Click>=8.3.1",
+    "protobuf>=6.33.5,<7",
+    "requests>=2.32.5",
+    "urllib3>=2.5.0",
+    "Pillow>=12.0.0",
+    "img2pdf>=0.6.3",
+    "python-dotenv>=1.2.1",
+    "filelock>=3.20.0",
+    "playwright>=1.55.0",
+]
+
+[project.urls]
+Source = "https://github.com/l0westbob/mloader"
+Upstream = "https://github.com/hurlenko/mloader"
+
+[project.scripts]
+mloader = "mloader.__main__:main"
+
+[dependency-groups]
+dev = [
+    "pytest>=8.4.0",
+    "pytest-cov>=6.2.0",
+    "ruff>=0.13.0",
+    "ty>=0.0.24",
+]
+
+[tool.uv]
+default-groups = ["dev"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["mloader"]
+
+[tool.pytest.ini_options]
+addopts = "-q"
+testpaths = ["tests"]
+
+[tool.ruff]
+target-version = "py314"
+line-length = 100
+extend-exclude = ["mloader/response_pb2.py"]
+
+[tool.ruff.lint]
+select = [
+    "F",
+    "D100",
+    "D101",
+    "D102",
+    "D103",
+    "D104",
+    "D107",
+    "ANN001",
+    "ANN002",
+    "ANN003",
+    "ANN201",
+    "ANN202",
+    "ANN204",
+    "ANN205",
+]
+
+[tool.ruff.lint.per-file-ignores]
+"mloader/__main__.py" = ["E402"]
+
+[tool.ty.environment]
+python-version = "3.14"
+
+[tool.coverage.run]
+source = ["mloader"]
+omit = [
+    "mloader/response_pb2.py",
+    "mloader/**/__init__.py",
+]
+
+[tool.coverage.report]
+show_missing = true

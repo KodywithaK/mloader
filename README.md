@@ -1,0 +1,437 @@
+# Mangaplus Downloader
+
+![Version](https://img.shields.io/badge/version-v2.1.2-brightgreen.svg)
+![Python](https://img.shields.io/badge/python-v3.14+-blue.svg)
+![Coverage](https://img.shields.io/badge/coverage-100%25-brightgreen.svg)
+![License](https://img.shields.io/badge/license-GPLv3-blue.svg)
+
+## **mloader** - download manga from mangaplus.shueisha.co.jp
+
+## 🚩 Table of Contents
+
+-   [Installation](#-installation)
+-   [Development](#-development)
+-   [Testing](#-testing)
+-   [Docker](#-docker)
+-   [Usage](#-usage)
+-   [Command line interface](#%EF%B8%8F-command-line-interface)
+-   [Extending mloader](#-extending-mloader)
+
+## 💾 Installation
+
+The recommended installation method is using `uv`:
+
+```bash
+uv tool install mloader-ng
+```
+
+After installation, the `mloader` command will be available. Check the [command line](#%EF%B8%8F-command-line-interface) section for supported commands.
+
+If you prefer `pip`, `pip install mloader-ng` still works.
+
+## 🛠 Development
+
+```bash
+git clone https://github.com/l0westbob/mloader.git
+cd mloader
+uv sync
+```
+
+This package is published as `mloader-ng` (temporary maintained rewrite fork).
+The CLI command remains `mloader`.
+
+### Stability and API access posture
+
+`mloader` is maintained as a stable production CLI/Docker app. Current development is evolutionary:
+small, tested hardening changes are preferred over large rewrites so current cron jobs, paths, flags,
+manifest files, and exit codes stay stable.
+
+The auth settings shipped in this repository are suitable for free-tier/local development only. They
+can download free-access chapters, but they must not be treated as proof that subscription/MAX or
+full-catalog downloads work. Full-catalog cron usage requires your own subscription-capable auth
+settings via environment variables, config, or Docker secrets.
+
+When the free-tier key hits a subscription-only chapter, `mloader` should fail cleanly with an
+external/access error such as “subscription required”, not an internal bug.
+
+## ✅ Testing
+
+```bash
+uv run pytest
+```
+
+Coverage is enforced at **100%** in CI:
+
+```bash
+uv run pytest --cov=mloader --cov-report=term-missing --cov-fail-under=100
+```
+
+Lint and format checks run through Ruff:
+
+```bash
+uv run ruff check .
+uv run ruff format --check .
+```
+
+Type checking runs through `ty`. The project does not maintain a Pyright configuration; `ty` is the
+single supported local and CI type checker.
+
+```bash
+uv run ty check mloader scripts tests
+```
+
+Run the same local quality gate used for implementation phases with:
+
+```bash
+uv run ruff format --check .
+uv run ruff check .
+uv run ty check mloader scripts tests
+uv run python scripts/sync_readme_cli_reference.py --check
+uv run pytest --cov=mloader --cov-report=term-missing --cov-fail-under=100
+```
+
+Verify README example targets against live MangaPlus API responses:
+
+```bash
+uv run python scripts/verify_readme_examples.py
+```
+
+Safe local smoke checks that do not require paid access:
+
+```bash
+uv run pytest -q
+uv run mloader --all --list-only --language english
+uv run mloader --chapter-id 1024959 --out /tmp/mloader-smoke
+```
+
+Subscription-limited/full-catalog checks should be run only with your own subscription-capable auth
+settings. With the repository default/free-tier auth, subscription-only chapters are expected to fail
+as controlled external access failures.
+
+## 🐳 Docker
+
+`docker/Dockerfile` installs `mloader` from the local repository files.
+
+Release images are published to GitHub Container Registry at
+[`ghcr.io/l0westbob/mloader`](https://github.com/l0westbob/mloader/pkgs/container/mloader).
+The `latest` tag points at the newest image published from `main`.
+
+```bash
+docker pull ghcr.io/l0westbob/mloader:latest
+docker pull ghcr.io/l0westbob/mloader:2.1.2
+```
+
+The image workflow publishes on `main`, `v*` tags, and manual dispatch. If GHCR creates
+the package as private after the first push, make it public once in the package settings.
+
+To use the published image in Compose, replace the local `build:` block with:
+
+```yaml
+image: ghcr.io/l0westbob/mloader:2.1.2
+```
+
+The default `compose.yaml` now runs a long-lived cron daemon inside the container and executes `mloader` weekly.
+The container preserves explicit `--out /downloads` behavior, uses a lock directory to avoid
+overlapping cron runs, and logs clear start/end markers with exit codes.
+
+Default schedule and arguments:
+
+```bash
+MLOADER_CRON_SCHEDULE="0 3 * * 1"
+MLOADER_CRON_ARGS="--all --language english --format pdf --out /downloads --cover"
+```
+
+This means: every Monday at 03:00 container time.
+
+For full-catalog Docker runs, replace the free-tier repository auth settings with your own
+subscription-capable settings. Otherwise subscription-only chapters will be reported as controlled
+external access failures.
+
+Useful runtime knobs in `compose.yaml`:
+
+- `MLOADER_CRON_SCHEDULE`: standard 5-field cron expression.
+- `MLOADER_CRON_ARGS`: arguments passed to `mloader` for scheduled runs.
+- `MLOADER_RUN_ON_START`: `"true"` to run one job immediately on container startup.
+- `MLOADER_RUN_REPORT_PATH`: optional JSON report path for weekly unattended runs.
+- `MLOADER_CRON_LOCK_DIR`: lock directory used to skip overlapping schedule ticks.
+
+Run in background:
+
+```bash
+docker compose up -d --build
+```
+
+Check scheduler logs:
+
+```bash
+docker compose logs -f mloader
+```
+
+## 📙 Usage
+
+Copy the url of the chapter or title you want to download and pass it to `mloader`.
+
+Use `--title` with `--chapter` to target chapter numbers, or `--chapter-id` for direct API chapter IDs.
+
+You can download individual chapters or full title (but only available chapters).
+
+Chapters can be saved in different formats (check the `--help` output for the available formats).
+
+By default, `mloader` writes each chapter as a CBZ archive. CBZ archives contain page images plus
+a root-level `ComicInfo.xml` metadata file for comic library apps such as Komga. When MangaPlus
+provides the data, `ComicInfo.xml` includes:
+
+- series and chapter title, chapter number, language, publisher, manga reading direction, and
+  digital format
+- author in the ComicInfo `Writer` field
+- title summary, MangaPlus tags as both `Genre` and `Tags`, and the MangaPlus web/share URL
+- chapter release date (`Year`, `Month`, `Day`) and page count
+
+If MangaPlus does not provide tags, CBZ metadata falls back to `Genre` = `Manga`.
+
+Typical MangaPlus IDs are multi-digit integers (title IDs are commonly 6 digits), for example:
+
+```bash
+mloader https://mangaplus.shueisha.co.jp/viewer/1024959
+mloader https://mangaplus.shueisha.co.jp/titles/100312 -f pdf
+mloader --title 100312 --chapter 12
+mloader --chapter-id 1024959
+mloader --title 100312 --cover
+mloader --title 100312 --cover-format webp
+```
+
+For an exhaustive, option-complete command catalog (including discovery, capture, resume, and output modes):
+
+```bash
+mloader --show-examples
+```
+
+When `--capture-api` is enabled, mloader stores every fetched API payload (raw protobuf + metadata + parsed JSON when possible). This is useful for regression fixture collection and for tracking upstream API changes over time.
+
+Every title directory now includes a resumable download manifest at `.mloader-manifest.json`.  
+Rerunning the same command skips chapters already marked as completed and retries chapters that previously failed or were interrupted.
+
+Use `--no-resume` to ignore manifest state for a run, or `--manifest-reset` to clear manifest state before downloading.
+
+Download all discoverable titles from MangaPlus list pages with one command. This is a
+subscription-auth example when paired with non-free chapters:
+
+```bash
+mloader --all --format pdf
+```
+
+As of February 25, 2026, this will download 24,944 chapters over a total of 637 titles with a size of around 220GB (English catalog).
+
+The bulk command uses protobuf API discovery first (`/api/title_list/allV2`), then falls back to
+static page scraping and optional browser-rendered scraping (`--browser-fallback`, enabled by
+default) when needed.
+
+For unattended Docker/cron runs, `--run-report <file>` or `MLOADER_RUN_REPORT_PATH` writes a JSON
+report with run timing, selected args, discovered-title count, summary counters, access-failure
+count, and exporter safety mode.
+
+Restrict bulk discovery to specific languages:
+
+```bash
+mloader --all --language english --language spanish --list-only
+```
+
+Supported `--language` values:
+- `english`
+- `spanish`
+- `french`
+- `indonesian`
+- `portuguese`
+- `russian`
+- `thai`
+- `german`
+- `vietnamese`
+
+As of February 24, 2026, all the languages above are present in the live `allV2` payload.
+
+Install browser runtime locally with:
+
+```bash
+playwright install chromium
+```
+
+## 🖥️ Command line interface
+
+Currently `mloader` supports these options
+
+```
+Usage: mloader [OPTIONS] [URLS]...
+
+  Command-line tool to download manga from mangaplus
+
+Options:
+  --version                       Show the version and exit.
+  --json                          Emit structured JSON output to stdout
+  --quiet                         Suppress non-error human-readable output
+  --show-examples                 Print exhaustive command examples and exit
+  --verbose                       Increase logging verbosity (repeatable)
+  -o, --out <directory>           Output directory for downloads  [default:
+                                  mloader_downloads]
+  --verify-capture-schema <directory>
+                                  Verify captured API payloads
+                                  against required response schema fields and
+                                  exit
+  --verify-capture-baseline <directory>
+                                  Compare verified capture schema
+                                  signatures against a baseline capture
+                                  directory
+  --all                           Discover all available titles and
+                                  download them
+  --page TEXT                     MangaPlus list page to scrape for title
+                                  links (repeatable)
+  --title-index-endpoint TEXT     MangaPlus mobile API endpoint used for
+                                  API-first title discovery
+  --id-length INTEGER RANGE       If set, keep only title IDs with this
+                                  exact digit length
+  --language [english|spanish|french|indonesian|portuguese|russian|thai|german|vietnamese]
+                                  Restrict --all discovery to one or
+                                  more languages (repeatable)
+  --list-only                     Only print discovered title IDs for
+                                  --all and exit
+  --browser-fallback / --no-browser-fallback
+                                  Use Playwright-rendered scraping when
+                                  static page fetch yields no title IDs
+  -r, --raw                       Save raw images
+  -f, --format [cbz|pdf]          Save as CBZ or PDF  [default: cbz]
+  --capture-api <directory>       Dump raw API payload captures (protobuf +
+                                  metadata) to this directory
+  --run-report <file>             Write a JSON run report for unattended
+                                  cron/systemd runs
+  -q, --quality [super_high|high|low]
+                                  Image quality  [default: super_high]
+  -s, --split                     Split combined images
+  -c, --chapter INTEGER           Chapter number
+  --chapter-id INTEGER            Chapter API ID
+  -t, --title INTEGER             Title id
+  -b, --begin INTEGER RANGE       Minimal chapter to try to download
+                                  [default: 0;x>=0]
+  -e, --end INTEGER RANGE         Maximal chapter to try to download  [x>=1]
+  -l, --last                      Download only the last chapter for title
+  --chapter-title                 Include chapter titles in filenames
+  --chapter-subdir                Save raw images in subdirectories by chapter
+  -m, --meta                      Export additional metadata as JSON
+  --cover                         Download each title cover image (PNG by
+                                  default)
+  --cover-format [png|jpg|webp]   Cover image format; implies --cover when
+                                  provided  [default: png]
+  --resume / --no-resume          Use per-title manifest state to skip
+                                  already completed chapters
+  --manifest-reset                Reset per-title manifest state before
+                                  downloading
+  --help                          Show this message and exit.
+```
+
+Output mode behavior:
+
+- `--json`: emits machine-readable JSON payloads for successful command completion and controlled command failures.
+- `--quiet`: suppresses intro and informational command output.
+- `--verbose`: enables debug-level logging.
+- `--format cbz`: writes a root-level `ComicInfo.xml` with available MangaPlus metadata.
+
+Download run summaries include:
+- downloaded chapter count
+- manifest-skipped chapter count
+- failed chapter count and failed chapter IDs
+
+### Parameter reference
+
+This section is generated from CLI metadata. Update it with `uv run python scripts/sync_readme_cli_reference.py`.
+
+<!-- cli-reference:start -->
+`URLS`:
+- Positional MangaPlus URLs (`viewer/<id>` and `titles/<id>`).
+
+| Option | Description | Default | Env |
+| --- | --- | --- | --- |
+| `--version` | Show the version and exit. | `false` | `-` |
+| `--json` | Emit structured JSON output to stdout | `false` | `-` |
+| `--quiet` | Suppress non-error human-readable output | `false` | `-` |
+| `--show-examples` | Print exhaustive command examples and exit | `false` | `-` |
+| `--verbose`, `-v` | Increase logging verbosity (repeatable) | `0` | `-` |
+| `--out`, `-o` | Output directory for downloads | `mloader_downloads` | `MLOADER_EXTRACT_OUT_DIR` |
+| `--verify-capture-schema` | Verify captured API payloads against required response schema fields and exit | `-` | `-` |
+| `--verify-capture-baseline` | Compare verified capture schema signatures against a baseline capture directory | `-` | `-` |
+| `--all` | Discover all available titles and download them | `false` | `-` |
+| `--page` | MangaPlus list page to scrape for title links (repeatable) | `https://mangaplus.shueisha.co.jp/manga_list/ongoing, https://mangaplus.shueisha.co.jp/manga_list/completed, https://mangaplus.shueisha.co.jp/manga_list/one_shot` | `-` |
+| `--title-index-endpoint` | MangaPlus mobile API endpoint used for API-first title discovery | `https://jumpg-api.tokyo-cdn.com/api/title_list/allV2` | `MLOADER_TITLE_INDEX_ENDPOINT` |
+| `--id-length` | If set, keep only title IDs with this exact digit length | `-` | `-` |
+| `--language` | Restrict --all discovery to one or more languages (repeatable) | `-` | `-` |
+| `--list-only` | Only print discovered title IDs for --all and exit | `false` | `-` |
+| `--browser-fallback`, `--no-browser-fallback` | Use Playwright-rendered scraping when static page fetch yields no title IDs | `true` | `-` |
+| `--raw`, `-r` | Save raw images | `false` | `MLOADER_RAW` |
+| `--format`, `-f` | Save as CBZ or PDF | `cbz` | `MLOADER_OUTPUT_FORMAT` |
+| `--filename-style` | Filename style for chapter-level outputs (legacy excludes language tags) | `legacy` | `MLOADER_FILENAME_STYLE` |
+| `--rename-existing-filenames` | Rename existing legacy chapter filenames to the selected filename style | `false` | `-` |
+| `--capture-api` | Dump raw API payload captures (protobuf + metadata) to this directory | `-` | `MLOADER_CAPTURE_API_DIR` |
+| `--run-report` | Write a JSON run report for unattended cron/systemd runs | `-` | `MLOADER_RUN_REPORT_PATH` |
+| `--quality`, `-q` | Image quality | `super_high` | `MLOADER_QUALITY` |
+| `--split`, `-s` | Split combined images | `false` | `MLOADER_SPLIT` |
+| `--chapter`, `-c` | Chapter number (integer, e.g. 1, 12) | `-` | `-` |
+| `--chapter-id` | Chapter API ID (integer, e.g. 1024959) | `-` | `-` |
+| `--title`, `-t` | Title ID (integer, usually 6 digits, e.g. 100312) | `-` | `-` |
+| `--begin`, `-b` | Minimal chapter to download | `0` | `-` |
+| `--end`, `-e` | Maximal chapter to download | `-` | `-` |
+| `--last`, `-l` | Download only the last chapter for each title | `false` | `-` |
+| `--chapter-title` | Include chapter titles in filenames | `false` | `-` |
+| `--chapter-subdir` | Save raw images in subdirectories by chapter | `false` | `-` |
+| `--meta`, `-m` | Export additional metadata as JSON | `false` | `-` |
+| `--cover` | Download each title cover image (PNG by default) | `false` | `-` |
+| `--cover-format` | Cover image format; implies --cover when provided | `png` | `-` |
+| `--resume`, `--no-resume` | Use per-title manifest state to skip already completed chapters | `true` | `-` |
+| `--manifest-reset` | Reset per-title manifest state before downloading | `false` | `-` |
+<!-- cli-reference:end -->
+
+Deterministic exit-code mapping:
+
+- `0`: success
+- `2`: user input/usage error (Click argument parsing)
+- `3`: validation error (invalid CLI option combinations, schema verification validation)
+- `4`: external failure (upstream API/subscription/access failures)
+- `5`: internal bug/unexpected runtime failure
+
+Runtime auth settings (`app_ver`, `os`, `os_ver`, `secret`) are resolved with this priority:
+
+1. CLI/runtime overrides (internal, reserved for programmatic usage)
+2. Environment variables: `APP_VER`, `OS`, `OS_VER`, `SECRET`
+3. Config file: `MLOADER_CONFIG_FILE` (or local `.mloader.toml`)
+4. Built-in defaults
+
+Example TOML config:
+
+```toml
+[auth]
+app_ver = "97"
+os = "ios"
+os_ver = "18.1"
+secret = "your-secret"
+```
+
+When `--meta` is enabled, `title_metadata.json` stores chapters keyed by chapter ID (`"chapters": {"<chapter_id>": ...}`) and includes each chapter `sub_title` and `thumbnail_url`.
+
+Verify your recorded payload set:
+
+```bash
+mloader --verify-capture-schema ./capture
+```
+
+Compare a new capture run against your committed baseline:
+
+```bash
+mloader --verify-capture-schema ./capture --verify-capture-baseline ./tests/fixtures/api_captures/baseline
+```
+
+## 🧩 Extending mloader
+
+`mloader` is designed around domain DTOs, composed runtime services, and exporter classes.
+
+-   Add a new exporter by subclassing `ExporterBase`.
+-   Set `format = "<name>"` in your exporter.
+-   Implement `add_image` and `skip_image`.
+
+See `CONTRIBUTING.md` for architecture and extension details.
+Detailed architecture notes are in `docs/ARCHITECTURE.md`.
